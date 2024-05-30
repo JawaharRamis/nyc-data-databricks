@@ -44,7 +44,7 @@ else:
 
 # COMMAND ----------
 
-# MAGIC %run ./04-bronze
+# MAGIC %run ./03-bronze
 
 # COMMAND ----------
 
@@ -56,20 +56,23 @@ BZ.consume(once, processing_time)
 
 # COMMAND ----------
 
-# MAGIC %run ./05-silver
-
-# COMMAND ----------
-
-# MAGIC %run ./06-gold
+# MAGIC %run ./04-silver
 
 # COMMAND ----------
 
 SL = Silver(env)
-GL = Gold(env)
 
 # COMMAND ----------
 
 SL.upsert(once, processing_time)
+
+# COMMAND ----------
+
+# MAGIC  %run ./06-gold
+
+# COMMAND ----------
+
+GL = Gold(env)
 
 # COMMAND ----------
 
