@@ -6,25 +6,57 @@
 class Bronze():
     def __init__(self, env):        
         self.Conf = Config()
-        self.landing_zone = self.Conf.base_dir_data + "/raw" 
-        self.checkpoint_base = self.Conf.base_dir_checkpoint + "/checkpoints"
+        self.landing_zone = self.Conf.unmanaged_loc + "/data-zone" 
+        self.checkpoint_base = self.Conf.unmanaged_loc + "/checkpoints"
         self.catalog = env
         self.db_name = self.Conf.db_name
         spark.sql(f"USE {self.catalog}.{self.db_name}")
         
     def consume_crashes(self, once=True, processing_time="5 seconds"):
         from pyspark.sql import functions as F
-        schema = "user_id long, device_id long, mac_address string, registration_timestamp double"
+        from pyspark.sql.types import StructType, StructField, StringType, DateType, TimestampType, DoubleType, IntegerType
+
+        schema = StructType([
+            StructField("crash_date", DateType(), nullable=True),
+            StructField("crash_time", TimestampType(), nullable=True),
+            StructField("cross_street_name", StringType(), nullable=True),
+            StructField("number_of_persons_injured", IntegerType(), nullable=True),
+            StructField("number_of_persons_killed", IntegerType(), nullable=True),
+            StructField("number_of_pedestrians_injured", IntegerType(), nullable=True),
+            StructField("number_of_pedestrians_killed", IntegerType(), nullable=True),
+            StructField("number_of_cyclist_injured", IntegerType(), nullable=True),
+            StructField("number_of_cyclist_killed", IntegerType(), nullable=True),
+            StructField("number_of_motorist_injured", IntegerType(), nullable=True),
+            StructField("number_of_motorist_killed", IntegerType(), nullable=True),
+            StructField("contributing_factor_vehicle_1", StringType(), nullable=True),
+            StructField("collision_id", StringType(), nullable=False),
+            StructField("vehicle_type_code_1", StringType(), nullable=True),
+            StructField("on_street_name", StringType(), nullable=True),
+            StructField("borough", StringType(), nullable=True),
+            StructField("zip_code", StringType(), nullable=True),
+            StructField("latitude", DoubleType(), nullable=True),
+            StructField("longitude", DoubleType(), nullable=True),
+            StructField("location", StringType(), nullable=True),
+            StructField("contributing_factor_vehicle_2", StringType(), nullable=True),
+            StructField("off_street_name", StringType(), nullable=True),
+            StructField("vehicle_type_code_2", StringType(), nullable=True),
+            StructField("contributing_factor_vehicle_3", StringType(), nullable=True),
+            StructField("contributing_factor_vehicle_4", StringType(), nullable=True),
+            StructField("vehicle_type_code_3", StringType(), nullable=True),
+            StructField("vehicle_type_code_4", StringType(), nullable=True),         
+            StructField("contributing_factor_vehicle_5", StringType(), nullable=True),
+            StructField("vehicle_type_code_5", StringType(), nullable=True)
+        ])
         
         
         df_stream = (spark.readStream
                         .format("cloudFiles")
-                        # .schema(schema)
+                        .schema(schema)
                         .option("maxFilesPerTrigger", 1)
                         .option("cloudFiles.format", "csv")
                         .option("header", "true")
-                        .option("inferSchema", True)
-                        .load(self.landing_zone + "/bronze/crashes")
+                        # .option("mergeSchema", True)
+                        .load(self.landing_zone + "/crashes")
                         .withColumn("load_time", F.current_timestamp()) 
                         .withColumn("source_file", F.input_file_name())
                     )
@@ -33,10 +65,10 @@ class Bronze():
                                  .format("delta") \
                                  .option("checkpointLocation", self.checkpoint_base + "/bronze/crashes") \
                                  .outputMode("append") \
+                                 .option("mergeSchema", True) \
                                  .queryName("crashes_bz_ingestion_stream")
         
         spark.sparkContext.setLocalProperty("spark.scheduler.pool", "bronze_p2")
-        
         if once == True:
             return stream_writer.trigger(availableNow=True).toTable(f"{self.catalog}.{self.db_name}.crashes_bz")
         else:
@@ -47,6 +79,7 @@ class Bronze():
         start = int(time.time())
         print(f"\nStarting bronze layer consumption ...")
         self.consume_crashes(once, processing_time)
+        print("completed crashes consumption ...")
         if once:
             for stream in spark.streams.active:
                 stream.awaitTermination()
@@ -69,3 +102,7 @@ class Bronze():
     #     self.assert_count("kafka_multiplex_bz", 16 if sets == 1 else 32, "topic='workout'")
     #     self.assert_count("kafka_multiplex_bz", sets * 253801, "topic='bpm'")
     #     print(f"Bronze layer validation completed in {int(time.time()) - start} seconds")                
+
+# COMMAND ----------
+
+

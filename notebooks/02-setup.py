@@ -17,7 +17,9 @@ class SetupHelper():
     def create_db(self):
         spark.catalog.clearCache()
         print(f"Creating the database {self.catalog}.{self.db_name}...", end='')
-        spark.sql(f"CREATE DATABASE IF NOT EXISTS {self.catalog}.{self.db_name}")
+        spark.sql(f"""CREATE DATABASE IF NOT EXISTS {self.catalog}.`{self.db_name}`
+                  MANAGED LOCATION 's3://nyc-opendata-managed/data/'
+                  """)
         spark.sql(f"USE {self.catalog}.{self.db_name}")
         self.initialized = True
         print("Created database successfully!!")
@@ -26,17 +28,9 @@ class SetupHelper():
         if(self.initialized):
             print(f"Creating crashes_bz table...", end='')
             spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.{self.db_name}.crashes_bz (
-                collision_id string,
-                accident_date date,
-                accident_time time,
-                borough string,
-                zip_code string,
-                latitude double,
-                longitude double,
-                location string,
-                on_street_name string,
+                crash_date date,
+                crash_time timestamp,
                 cross_street_name string,
-                off_street_name string,
                 number_of_persons_injured integer,
                 number_of_persons_killed integer,
                 number_of_pedestrians_injured integer,
@@ -46,14 +40,22 @@ class SetupHelper():
                 number_of_motorist_injured integer,
                 number_of_motorist_killed integer,
                 contributing_factor_vehicle_1 string,
+                collision_id string,
+                vehicle_type_code_1 string,
+                on_street_name string,
+                borough string,
+                zip_code string,
+                latitude double,
+                longitude double,
+                location string,
                 contributing_factor_vehicle_2 string,
+                off_street_name string,
+                vehicle_type_code_2 string,
                 contributing_factor_vehicle_3 string,
                 contributing_factor_vehicle_4 string,
-                contributing_factor_vehicle_5 string,
-                vehicle_type_code_1 string,
-                vehicle_type_code_2 string,
                 vehicle_type_code_3 string,
                 vehicle_type_code_4 string,
+                contributing_factor_vehicle_5 string,
                 vehicle_type_code_5 string
                 )
                 """) 
@@ -67,7 +69,7 @@ class SetupHelper():
             print(f"Creating vehicles_bz table...", end='')
             spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.{self.db_name}.vehicles_bz(
                     crash_date date,
-                    crash_time time,
+                    crash_time timestamp,
                     collision_id string,
                     unique_id string,
                     point_of_impact string,
@@ -105,7 +107,7 @@ class SetupHelper():
                     unique_id string,
                     collision_id string,
                     accident_date date,
-                    accident_time time,
+                    accident_time timestamp,
                     victim_id string,
                     victim_type string,
                     victim_injury string,
@@ -123,130 +125,11 @@ class SetupHelper():
                     contributing_factor_1 string,
                     contributing_factor_2 string,
                     victim_sex string
+                )
                 """) 
             print("Done")
         else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")       
-    
-            
-    def create_users(self):
-        if(self.initialized):
-            print(f"Creating users table...", end='')
-            spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.{self.db_name}.users(
-                    user_id bigint, 
-                    device_id bigint, 
-                    mac_address string,
-                    registration_timestamp timestamp
-                    )
-                  """)  
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")            
-    
-    def create_gym_logs(self):
-        if(self.initialized):
-            print(f"Creating gym_logs table...", end='')
-            spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.{self.db_name}.gym_logs(
-                    mac_address string,
-                    gym bigint,
-                    login timestamp,                      
-                    logout timestamp
-                    )
-                  """) 
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
-            
-    def create_user_profile(self):
-        if(self.initialized):
-            print(f"Creating user_profile table...", end='')
-            spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.{self.db_name}.user_profile(
-                    user_id bigint, 
-                    dob DATE, 
-                    sex STRING, 
-                    gender STRING, 
-                    first_name STRING, 
-                    last_name STRING, 
-                    street_address STRING, 
-                    city STRING, 
-                    state STRING, 
-                    zip INT, 
-                    updated TIMESTAMP)
-                  """)  
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
-
-    def create_heart_rate(self):
-        if(self.initialized):
-            print(f"Creating heart_rate table...", end='')
-            spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.{self.db_name}.heart_rate(
-                    device_id LONG, 
-                    time TIMESTAMP, 
-                    heartrate DOUBLE, 
-                    valid BOOLEAN)
-                  """)
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
-
-            
-    def create_user_bins(self):
-        if(self.initialized):
-            print(f"Creating user_bins table...", end='')
-            spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.{self.db_name}.user_bins(
-                    user_id BIGINT, 
-                    age STRING, 
-                    gender STRING, 
-                    city STRING, 
-                    state STRING)
-                  """)  
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
-            
-                        
-            
-            
-    def create_workout_bpm_summary(self):
-        if(self.initialized):
-            print(f"Creating workout_bpm_summary table...", end='')
-            spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.{self.db_name}.workout_bpm_summary(
-                    workout_id INT, 
-                    session_id INT, 
-                    user_id BIGINT, 
-                    age STRING, 
-                    gender STRING, 
-                    city STRING, 
-                    state STRING, 
-                    min_bpm DOUBLE, 
-                    avg_bpm DOUBLE, 
-                    max_bpm DOUBLE, 
-                    num_recordings BIGINT)
-                  """)
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
-            
-    def create_gym_summary(self):
-        if(self.initialized):
-            print(f"Creating gym_summar gold view...", end='')
-            spark.sql(f"""CREATE OR REPLACE VIEW {self.catalog}.{self.db_name}.gym_summary AS
-                            SELECT to_date(login::timestamp) date,
-                            gym, l.mac_address, workout_id, session_id, 
-                            round((logout::long - login::long)/60,2) minutes_in_gym,
-                            round((end_time::long - start_time::long)/60,2) minutes_exercising
-                            FROM gym_logs l 
-                            JOIN (
-                            SELECT mac_address, workout_id, session_id, start_time, end_time
-                            FROM completed_workouts w INNER JOIN users u ON w.user_id = u.user_id) w
-                            ON l.mac_address = w.mac_address 
-                            AND w. start_time BETWEEN l.login AND l.logout
-                            order by date, gym, l.mac_address, session_id
-                        """)
-            print("Done")
-        else:
-            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
+            raise ReferenceError("Application database is not defined. Cannot create table in default database.")        
             
     def setup(self):
         import time
@@ -274,7 +157,7 @@ class SetupHelper():
         print(f"Found database {self.catalog}.{self.db_name}: Success")
         self.assert_table("crashes_bz")   
         self.assert_table("vehicles_bz")        
-        self.assert_table("persons_bz ")
+        self.assert_table("persons_bz")
         print(f"Setup validation completed in {int(time.time()) - start} seconds")
         
     def cleanup(self): 
@@ -282,9 +165,13 @@ class SetupHelper():
             print(f"Dropping the database {self.catalog}.{self.db_name}...", end='')
             spark.sql(f"DROP DATABASE {self.catalog}.{self.db_name} CASCADE")
             print("Done")
-        print(f"Deleting {self.landing_zone}...", end='')
-        dbutils.fs.rm(self.landing_zone, True)
-        print("Done")
+        # print(f"Deleting {self.landing_zone}...", end='')
+        # dbutils.fs.rm(self.landing_zone, True)
+        # print("Done")
         print(f"Deleting {self.checkpoint_base}...", end='')
         dbutils.fs.rm(self.checkpoint_base, True)
         print("Done")    
+
+# COMMAND ----------
+
+

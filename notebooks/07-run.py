@@ -30,7 +30,12 @@ SH = SetupHelper(env)
 
 # COMMAND ----------
 
+SH.cleanup()
+
+# COMMAND ----------
+
 setup_required = spark.sql(f"SHOW DATABASES IN {SH.catalog}").filter(f"databaseName == '{SH.db_name}'").count() != 1
+print(setup_required)
 if setup_required:
     SH.setup()
     SH.validate()
