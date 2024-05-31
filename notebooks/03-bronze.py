@@ -80,10 +80,11 @@ class Bronze():
         from pyspark.sql.types import StructType, StructField, StringType, DateType, TimestampType, DoubleType, IntegerType
 
         schema = StructType([
+            StructField("unique_id", StringType(), nullable=True),
             StructField("crash_date", DateType(), nullable=True),
             StructField("crash_time", TimestampType(), nullable=True),
             StructField("collision_id", StringType(), nullable=False),
-            StructField("unique_id", StringType(), nullable=True),
+            StructField("vehicle_id", StringType(), nullable=True),
             StructField("point_of_impact", StringType(), nullable=True),
             StructField("precrash", StringType(), nullable=True),
             StructField("public_property_damage", StringType(), nullable=True),
@@ -99,7 +100,6 @@ class Bronze():
             StructField("vehicle_damage_1", StringType(), nullable=True),
             StructField("vehicle_damage_2", StringType(), nullable=True),
             StructField("vehicle_damage_3", StringType(), nullable=True),
-            StructField("vehicle_id", StringType(), nullable=True),
             StructField("vehicle_make", StringType(), nullable=True),
             StructField("vehicle_model", StringType(), nullable=True),
             StructField("vehicle_type", StringType(), nullable=True),
@@ -113,7 +113,7 @@ class Bronze():
                         .option("maxFilesPerTrigger", 1)
                         .option("cloudFiles.format", "csv")
                         .option("header", "true")
-                        # .option("mergeSchema", True)
+                        .option("mergeSchema", True)
                         .load(self.landing_zone + "/vehicle")
                         .withColumn("load_time", F.current_timestamp()) 
                         .withColumn("source_file", F.input_file_name())
@@ -139,11 +139,11 @@ class Bronze():
         schema = StructType([
             StructField("unique_id", StringType(), nullable=True),
             StructField("collision_id", StringType(), nullable=False),
-            StructField("accident_date", DateType(), nullable=True),
-            StructField("accident_time", TimestampType(), nullable=True),
-            StructField("victim_id", StringType(), nullable=True),
-            StructField("victim_type", StringType(), nullable=True),
-            StructField("victim_injury", StringType(), nullable=True),
+            StructField("crash_date", DateType(), nullable=True),
+            StructField("crash_time", TimestampType(), nullable=True),
+            StructField("person_id", StringType(), nullable=True),
+            StructField("person_type", StringType(), nullable=True),
+            StructField("person_injury", StringType(), nullable=True),
             StructField("vehicle_id", StringType(), nullable=True),
             StructField("victim_age", IntegerType(), nullable=True),
             StructField("ejection", StringType(), nullable=True),
@@ -154,10 +154,10 @@ class Bronze():
             StructField("ped_location", StringType(), nullable=True), 
             StructField("ped_action", StringType(), nullable=True),
             StructField("complaint", StringType(), nullable=True),
-            StructField("victim_role", StringType(), nullable=True),
+            StructField("ped_role", StringType(), nullable=True),
             StructField("contributing_factor_1", StringType(), nullable=True),
             StructField("contributing_factor_2", StringType(), nullable=True),
-            StructField("victim_sex", StringType(), nullable=True)
+            StructField("person_sex", StringType(), nullable=True)
         ])
 
         df_stream = (spark.readStream
@@ -166,7 +166,7 @@ class Bronze():
                         .option("maxFilesPerTrigger", 1)
                         .option("cloudFiles.format", "csv")
                         .option("header", "true")
-                        # .option("mergeSchema", True)
+                        .option("mergeSchema", True)
                         .load(self.landing_zone + "/peoples")
                         .withColumn("load_time", F.current_timestamp()) 
                         .withColumn("source_file", F.input_file_name())

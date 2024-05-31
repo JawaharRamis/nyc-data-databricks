@@ -120,13 +120,14 @@ class SetupHelper():
             spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.bronze.persons_bz(
                     unique_id string,
                     collision_id string,
-                    accident_date date,
-                    accident_time timestamp,
-                    victim_id string,
-                    victim_type string,
-                    victim_injury string,
+                    crash_date date,
+                    crash_time timestamp,
+                    person_id string,
+                    person_type string,
+                    person_injury string,
                     vehicle_id string,
-                    victim_age integer,
+                    person_age integer,
+                    ped_role string,
                     ejection string,
                     emotional_status string,
                     bodily_injury string,
@@ -135,10 +136,9 @@ class SetupHelper():
                     ped_location string,
                     ped_action string,
                     complaint string,
-                    victim_role string,
                     contributing_factor_1 string,
                     contributing_factor_2 string,
-                    victim_sex string,
+                    person_sex string,
                     load_time timestamp,
                     source_file string
                 )
@@ -186,21 +186,15 @@ class SetupHelper():
                 point_of_impact string,
                 precrash string,
                 public_property_damage string,
-                public_property_damage_type string,
                 contributing_factor string,
-                # contributing_factor_2 string,
                 driver_license_jurisdiction string,
                 driver_license_status string,
-                driver_sex string,
+                sex string,
                 state_registration string,
                 travel_direction string,
-                vehicle_damage string,
-                # # vehicle_damage_1 string,
-                # vehicle_damage_2 string,
-                # vehicle_damage_3 string,
+                vehicle_damages string,
                 vehicle_id string,
                 vehicle_make string,
-                vehicle_model string,
                 vehicle_type string,
                 vehicle_year integer,
                 vehicle_occupants integer,
@@ -214,6 +208,32 @@ class SetupHelper():
         else:
             raise ReferenceError("Application database is not defined. Cannot create table in default database.")
 
+    def create_persons_sv(self):
+        if(self.initialized):
+            print(f"Creating persons_sv table...", end='')
+            spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.silver.persons_sv(
+                    unique_id string,
+                    collision_id string,
+                    crash_date date,
+                    crash_time timestamp,
+                    person_id string,
+                    person_type string,
+                    person_injury string,
+                    vehicle_id string,
+                    age integer,
+                    bodily_injury string,
+                    ped_role string,
+                    sex string,
+                    load_time timestamp,
+                    source_file string
+                )
+                USING DELTA
+                LOCATION '{self.managed_loc}/silver/persons_sv'
+                """)
+            print("Done")
+        else:
+            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
+
     def setup(self):
         import time
         start = int(time.time())
@@ -223,6 +243,8 @@ class SetupHelper():
         self.create_vehicles_bz()
         self.create_persons_bz()
         self.create_crashes_sv()
+        self.create_vehicles_sv()
+        self.create_persons_sv()
         print(f"Setup completed in {int(time.time()) - start} seconds")
         
     def assert_table(self, table_name, schema):
@@ -245,6 +267,8 @@ class SetupHelper():
         self.assert_table("vehicles_bz", "bronze")        
         self.assert_table("persons_bz", "bronze")
         self.assert_table("crashes_sv", "silver")
+        self.assert_table("vehicles_sv", "silver")
+        self.assert_table("persons_sv", "silver")
         print(f"Setup validation completed in {int(time.time()) - start} seconds")
         
     def cleanup(self): 

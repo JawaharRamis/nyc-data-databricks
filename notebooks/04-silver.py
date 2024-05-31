@@ -114,7 +114,129 @@ class Silver():
         else:
             return stream_writer.trigger(processingTime=processing_time).start()
 
+    def upsert_vehicles(self, once=True, processing_time="15 seconds", startingVersion=0):
+        from pyspark.sql.functions import concat_ws, col
+        from pyspark.sql import functions as F
+        
+        query = f"""
+            MERGE INTO {self.catalog}.{self.db_name}.vehicles_sv a
+            USING vehicles_delta b
+            ON a.unique_id=b.unique_id
+            WHEN NOT MATCHED THEN INSERT *
+            """
+        
+        data_upserter=Upserter(query, "vehicles_delta")
+
+        contributing_factors_columns = [
+            "contributing_factor_1", "contributing_factor_2"
+        ]
+
+        vehicle_damages_columns = [
+            "vehicle_damage", "vehicle_damage_1",
+            "vehicle_damage_2", "vehicle_damage_3",
+        ]
        
+        df_delta = (spark.readStream
+                        .option("startingVersion", startingVersion)
+                        .option("ignoreDeletes", True)
+                        .table(f"{self.catalog}.bronze.vehicles_bz")
+                        .withColumn(
+                            "vehicle_damages",
+                            concat_ws(",", *[col(c) for c in vehicle_damages_columns])
+                        )
+                        .withColumn(
+                            "contributing_factor",
+                            concat_ws(",", *[col(c) for c in contributing_factors_columns])
+                        )
+                        .withColumn(
+                            "driver_license_status",
+                            F.coalesce(F.col("driver_license_status"), F.lit("unknown"))
+                        )
+                        .withColumn(
+                            "driver_license_jurisdiction",
+                            F.coalesce(F.col("driver_license_jurisdiction"), F.lit("unknown"))
+                        )
+                        .select(
+                            "crash_date", "crash_time", "collision_id", "unique_id", "point_of_impact", "precrash", "public_property_damage", "contributing_factor", "driver_license_jurisdiction", "driver_license_status", F.col("driver_sex") .alias("sex"), "state_registration", "travel_direction", "vehicle_damages", "vehicle_id", "vehicle_make", "vehicle_type", "vehicle_year", "vehicle_occupants", "load_time", "source_file"
+                        )
+                        .dropDuplicates(["unique_id"])
+                )
+        
+        stream_writer = (df_delta.writeStream
+                                 .foreachBatch(data_upserter.upsert)
+                                 .outputMode("update")
+                                 .option("checkpointLocation", f"{self.checkpoint_base}/{self.db_name}/vehicles")
+                                 .queryName("vehicles_upsert_stream")
+                        )
+
+        spark.sparkContext.setLocalProperty("spark.scheduler.pool", "silver_p2")
+        
+        if once == True:
+            return stream_writer.trigger(availableNow=True).start()
+        else:
+            return stream_writer.trigger(processingTime=processing_time).start()
+        
+    def upsert_vehicles(self, once=True, processing_time="15 seconds", startingVersion=0):
+        from pyspark.sql.functions import concat_ws, col
+        from pyspark.sql import functions as F
+        
+        query = f"""
+            MERGE INTO {self.catalog}.{self.db_name}.vehicles_sv a
+            USING vehicles_delta b
+            ON a.unique_id=b.unique_id
+            WHEN NOT MATCHED THEN INSERT *
+            """
+        
+        data_upserter=Upserter(query, "vehicles_delta")
+
+        contributing_factors_columns = [
+            "contributing_factor_1", "contributing_factor_2"
+        ]
+
+        vehicle_damages_columns = [
+            "vehicle_damage", "vehicle_damage_1",
+            "vehicle_damage_2", "vehicle_damage_3",
+        ]
+       
+        df_delta = (spark.readStream
+                        .option("startingVersion", startingVersion)
+                        .option("ignoreDeletes", True)
+                        .table(f"{self.catalog}.bronze.vehicles_bz")
+                        .withColumn(
+                            "vehicle_damages",
+                            concat_ws(",", *[col(c) for c in vehicle_damages_columns])
+                        )
+                        .withColumn(
+                            "contributing_factor",
+                            concat_ws(",", *[col(c) for c in contributing_factors_columns])
+                        )
+                        .withColumn(
+                            "driver_license_status",
+                            F.coalesce(F.col("driver_license_status"), F.lit("unknown"))
+                        )
+                        .withColumn(
+                            "driver_license_jurisdiction",
+                            F.coalesce(F.col("driver_license_jurisdiction"), F.lit("unknown"))
+                        )
+                        .select(
+                            "crash_date", "crash_time", "collision_id", "unique_id", "point_of_impact", "precrash", "public_property_damage", "contributing_factor", "driver_license_jurisdiction", "driver_license_status", F.col("driver_sex") .alias("sex"), "state_registration", "travel_direction", "vehicle_damages", "vehicle_id", "vehicle_make", "vehicle_type", "vehicle_year", "vehicle_occupants", "load_time", "source_file"
+                        )
+                        .dropDuplicates(["unique_id"])
+                )
+        
+        stream_writer = (df_delta.writeStream
+                                 .foreachBatch(data_upserter.upsert)
+                                 .outputMode("update")
+                                 .option("checkpointLocation", f"{self.checkpoint_base}/{self.db_name}/vehicles")
+                                 .queryName("vehicles_upsert_stream")
+                        )
+
+        spark.sparkContext.setLocalProperty("spark.scheduler.pool", "silver_p2")
+        if once == True:
+            return stream_writer.trigger(availableNow=True).start()
+        else:
+            return stream_writer.trigger(processingTime=processing_time).start()
+        
     def _await_queries(self, once):
         if once:
             for stream in spark.streams.active:
@@ -125,6 +247,7 @@ class Silver():
         start = int(time.time())
         print(f"\nExecuting silver layer upsert ...")
         self.upsert_crashes(once, processing_time)
+        self.upsert_vehicles(once, processing_time)
         self._await_queries(once)
         print(f"Completed silver layer upsert {int(time.time()) - start} seconds")
         
