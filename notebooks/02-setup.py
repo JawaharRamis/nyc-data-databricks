@@ -243,8 +243,6 @@ class SetupHelper():
                     number_of_incidents string,
                     total_injuries string,
                     total_deaths string,
-                    most_frequent_borough_count string,
-                    most_frequent_borough string,
                     last_updated timestamp
                 )
                 USING DELTA
@@ -257,7 +255,7 @@ class SetupHelper():
     def create_vehicle_collisions_details_gd(self):
         if(self.initialized):
             print(f"Creating vehicle_collisions_details_gd table...", end='')
-            spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.silver.vehicle_collisions_details_gd(
+            spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.gold.vehicle_collisions_details_gd(
                 collision_id string,
                 unique_id_v1 string,
                 unique_id_v2 string,
@@ -286,9 +284,7 @@ class SetupHelper():
                 vehicle_year_v1 integer,
                 vehicle_year_v2 integer,
                 vehicle_occupants_v1 integer,
-                vehicle_occupants_v2 integer,
-                load_time timestamp,
-                source_file string
+                vehicle_occupants_v2 integer
                 )
                 USING DELTA
                 LOCATION '{self.managed_loc}/gold/vehicle_collisions_details_gd'
@@ -334,6 +330,8 @@ class SetupHelper():
         self.assert_table("crashes_sv", "silver")
         self.assert_table("vehicles_sv", "silver")
         self.assert_table("persons_sv", "silver")
+        self.assert_table("crashes_hourly_summary_gd", "gold")
+        self.assert_table("vehicle_collisions_details_gd", "gold")
         print(f"Setup validation completed in {int(time.time()) - start} seconds")
         
     def cleanup(self): 

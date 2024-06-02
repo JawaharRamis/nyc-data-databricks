@@ -82,7 +82,7 @@ class Silver():
                         .option("ignoreDeletes", True)
                         .table(f"{self.catalog}.bronze.crashes_bz")
                         .withColumn(
-                            "contributing_factor",
+                            "contributing_factors",
                             unique_concat_udf(F.array(*[col(c) for c in contributing_factors_columns]))
                         )
                         .withColumn(

@@ -44,6 +44,7 @@ else:
 
 # COMMAND ----------
 
+# MAGIC
 # MAGIC %run ./03-bronze
 
 # COMMAND ----------
@@ -68,7 +69,7 @@ SL.upsert(once, processing_time)
 
 # COMMAND ----------
 
-# MAGIC  %run ./06-gold
+# MAGIC  %run ./05-gold
 
 # COMMAND ----------
 
@@ -77,3 +78,7 @@ GL = Gold(env)
 # COMMAND ----------
 
 GL.upsert(once, processing_time)
+
+# COMMAND ----------
+
+
