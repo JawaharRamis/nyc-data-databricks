@@ -83,7 +83,7 @@ class SetupHelper():
                     collision_id string,
                     unique_id string,
                     point_of_impact string,
-                    precrash string,
+                    pre_crash string,
                     public_property_damage string,
                     public_property_damage_type string,
                     contributing_factor_1 string,
@@ -154,7 +154,7 @@ class SetupHelper():
             print(f"Creating crashes_sv table...", end='')
             spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.silver.crashes_sv (
                 crash_date date,
-                crash_time timestamp,
+                crash_time string,
                 cross_street_name string,
                 total_injured integer,
                 total_killed integer,
@@ -180,11 +180,11 @@ class SetupHelper():
             print(f"Creating vehicles_sv table...", end='')
             spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.silver.vehicles_sv (
                 crash_date date,
-                crash_time timestamp,
+                crash_time string,
                 collision_id string,
                 unique_id string,
                 point_of_impact string,
-                precrash string,
+                pre_crash string,
                 public_property_damage string,
                 contributing_factor string,
                 driver_license_jurisdiction string,
@@ -215,7 +215,7 @@ class SetupHelper():
                     unique_id string,
                     collision_id string,
                     crash_date date,
-                    crash_time timestamp,
+                    crash_time string,
                     person_id string,
                     person_type string,
                     person_injury string,
@@ -234,6 +234,69 @@ class SetupHelper():
         else:
             raise ReferenceError("Application database is not defined. Cannot create table in default database.")
 
+    def create_crashes_hourly_summary_gd(self):
+        if(self.initialized):
+            print(f"Creating crashes_hourly_summary_gd table...", end='')
+            spark.sql(f"""CREATE TABLE IF NOT EXISTS {self.catalog}.gold.crashes_hourly_summary_gd(
+                    crash_date date,
+                    crash_hour string,
+                    number_of_incidents string,
+                    total_injuries string,
+                    total_deaths string,
+                    most_frequent_borough_count string,
+                    most_frequent_borough string,
+                    last_updated timestamp
+                )
+                USING DELTA
+                LOCATION '{self.managed_loc}/gold/crashes_hourly_summary_gd'
+                """)
+            print("Done")
+        else:
+            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
+
+    def create_vehicle_collisions_details_gd(self):
+        if(self.initialized):
+            print(f"Creating vehicle_collisions_details_gd table...", end='')
+            spark.sql(f"""CREATE OR REPLACE TABLE {self.catalog}.silver.vehicle_collisions_details_gd(
+                collision_id string,
+                unique_id_v1 string,
+                unique_id_v2 string,
+                crash_date date,
+                crash_time string,                
+                point_of_impact_v1 string,
+                point_of_impact_v2 string,
+                pre_crash_v1 string,
+                pre_crash_v2 string,
+                driver_license_jurisdiction_v1 string,
+                driver_license_jurisdiction_v2 string,
+                driver_license_status_v1 string,
+                driver_license_status_v2 string,
+                sex_v1 string,
+                sex_v2 string,
+                state_registration_v1 string,
+                state_registration_v2 string,
+                travel_direction_v1 string,
+                travel_direction_v2 string,
+                vehicle_damages_v1 string,
+                vehicle_damages_v2 string,
+                vehicle_id_v1 string,
+                vehicle_id_v2 string,
+                vehicle_type_v1 string,
+                vehicle_type_v2 string,
+                vehicle_year_v1 integer,
+                vehicle_year_v2 integer,
+                vehicle_occupants_v1 integer,
+                vehicle_occupants_v2 integer,
+                load_time timestamp,
+                source_file string
+                )
+                USING DELTA
+                LOCATION '{self.managed_loc}/gold/vehicle_collisions_details_gd'
+                """) 
+            print("Done")
+        else:
+            raise ReferenceError("Application database is not defined. Cannot create table in default database.")
+
     def setup(self):
         import time
         start = int(time.time())
@@ -245,6 +308,8 @@ class SetupHelper():
         self.create_crashes_sv()
         self.create_vehicles_sv()
         self.create_persons_sv()
+        self.create_crashes_hourly_summary_gd()
+        self.create_vehicle_collisions_details_gd()
         print(f"Setup completed in {int(time.time()) - start} seconds")
         
     def assert_table(self, table_name, schema):
